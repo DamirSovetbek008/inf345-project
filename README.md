@@ -31,3 +31,4 @@ bash scripts/test.sh
 Expected result:
 
 TESTS: 3/3
+Built for INF 345 Milestone 1.
