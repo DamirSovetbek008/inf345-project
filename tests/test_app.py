@@ -34,7 +34,7 @@ class AppTests(unittest.TestCase):
         response = urllib.request.urlopen(
             f"http://127.0.0.1:{self.port}/healthz"
         )
-        self.assertEqual(response.read(), b"OK")
+        self.assertEqual(response.read(), b"INTENTIONAL_M2_FAILURE")
 
     def test_home_returns_project_name(self):
         response = urllib.request.urlopen(
