@@ -1,34 +1,59 @@
 # INF 345 Project
 
-A simple HTTP service written in Python for the INF 345 DevOps course.
+## Overview
+
+A simple HTTP service written in Python 3 for the INF 345 DevOps course. It uses only the Python standard library; no third-party dependencies are required.
+
+- `GET /` returns HTTP 200 with `INF 345 Project`.
+- `GET /healthz` returns HTTP 200 with `OK` for health checks.
+- Other paths return HTTP 404.
 
 ## Run
 
-Start the service:
+From the repository root, start the service:
 
+```bash
 bash scripts/run.sh
+```
 
-The service uses the PORT environment variable and defaults to port 8080.
+The service uses the `PORT` environment variable and defaults to port `8080`. Open `http://localhost:8080/`.
 
-Example:
+To use a different port:
 
+```bash
 PORT=9999 bash scripts/run.sh
+```
+
+Stop the service with Ctrl+C.
 
 ## Health Check
 
-GET /healthz
+```bash
+curl http://localhost:8080/healthz
+```
 
-Returns HTTP 200 with:
+Expected response: `OK` with HTTP 200.
 
-OK
+## Testing
 
-## Tests
+Run the three automated HTTP tests from the repository root:
 
-Run the automated tests:
-
+```bash
 bash scripts/test.sh
+```
 
-Expected result:
+The tests start their own server on a free local port, check the health status, health response body, and home response, then stop the server.
 
+A successful run exits with code 0 and prints:
+
+```text
 TESTS: 3/3
-Built for INF 345 Milestone 1.
+```
+
+A failed assertion exits with a nonzero code.
+
+## Continuous Integration
+
+`.github/workflows/main.yml` runs `bash scripts/test.sh` on every `push` and `pull_request`, using Python 3.12 on Ubuntu and Bash with pipefail. The workflow grants only `contents: read`.
+
+For M2, one health response assertion was temporarily changed to an incorrect expected value. GitHub Actions recorded a failed run, and the correct `OK` expectation was restored. The failed run remains in the history; the final tests pass.
