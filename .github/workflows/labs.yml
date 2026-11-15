@@ -71,3 +71,18 @@ jobs:
           kubectl -n drill describe pods
           kubectl -n drill get events --sort-by=.lastTimestamp
           kubectl -n drill logs deployment/drill --all-containers --tail=50 || true
+
+          rescue_image="$(cat drill/IMAGE)"
+          kubectl -n drill set image deployment/drill app="$rescue_image"
+          kubectl -n drill rollout status deployment/drill --timeout=120s
+
+          set +e
+          timeout 45 bash drill/start.sh check 2>&1 | tee "$RUNNER_TEMP/drill-fixed-check.log"
+          fixed_check_status=${PIPESTATUS[0]}
+          set -e
+          if grep -Eiq '(^|[^[:alpha:]])ok([^[:alpha:]]|$)' "$RUNNER_TEMP/drill-fixed-check.log"; then
+            echo "Incident fixed: the user check returned ok (check exit code: $fixed_check_status)"
+          else
+            echo "The fixed service did not return ok (check exit code: $fixed_check_status)"
+            exit 1
+          fi
