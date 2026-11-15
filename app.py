@@ -16,6 +16,15 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"INF 345 Project")
 
+        elif self.path == "/configz":
+            greeting = os.environ.get("GREETING", "Hello")
+            api_key_configured = bool(os.environ.get("API_KEY"))
+            body = f"GREETING={greeting}\nAPI_KEY_CONFIGURED={str(api_key_configured).lower()}"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(body.encode("utf-8"))
+
         else:
             self.send_response(404)
             self.end_headers()
