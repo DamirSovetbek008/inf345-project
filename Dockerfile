@@ -9,7 +9,7 @@ WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY app.py ./app.py
 
-USER app
+USER 1000:1000
 EXPOSE 8080
 
 CMD ["python3", "app.py"]
