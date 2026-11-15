@@ -56,8 +56,14 @@ jobs:
           cd "$RUNNER_TEMP/week9"
           trap 'bash drill/start.sh reset' EXIT
           bash drill/start.sh 1
-          if timeout 45 bash drill/start.sh check; then
-            echo "Expected the incident to break the service"
+          set +e
+          timeout 45 bash drill/start.sh check 2>&1 | tee "$RUNNER_TEMP/drill-check.log"
+          check_status=${PIPESTATUS[0]}
+          set -e
+          if grep -Fq "the service does NOT answer" "$RUNNER_TEMP/drill-check.log"; then
+            echo "Incident confirmed: the user check reports that the service does NOT answer (check exit code: $check_status)"
+          else
+            echo "Expected the incident to report an unavailable service (check exit code: $check_status)"
             exit 1
           fi
           kubectl -n drill get pods,services,endpointslices -o wide
