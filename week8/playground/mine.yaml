@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/damirsovetbek008/inf345-project:8912399af52b3a6e2331c26d761f6f651fac69c0
+          image: ghcr.io/damirsovetbek008/inf345-project:e0956497ad3cc8f4c9f63bff9e8250dd5461d1dc
           env:
             - name: PORT
               value: "8080"
