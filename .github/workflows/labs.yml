@@ -1,0 +1,88 @@
+name: Week 8 and Week 9 labs
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Run Kubernetes labs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLUSTER_CONTEXT: kind-ci
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install kind and kubectl
+        env:
+          KIND_VERSION: v0.33.0
+          KIND_SHA256: aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d
+          KUBECTL_VERSION: v1.37.1
+          KUBECTL_SHA512: decde4d990d0fbf6451e65524dec42c549de3339f27005c45af8d3c61cca1de852524ebf2215c82be86d4ab2621c823f56f718b8d2c304b9100a903e696c0c32
+        run: |
+          curl -fsSLo kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          echo "${KIND_SHA256}  kind" | sha256sum -c -
+          curl -fsSLO "https://dl.k8s.io/${KUBECTL_VERSION}/kubernetes-client-linux-amd64.tar.gz"
+          echo "${KUBECTL_SHA512}  kubernetes-client-linux-amd64.tar.gz" | sha512sum -c -
+          tar -xzf kubernetes-client-linux-amd64.tar.gz kubernetes/client/bin/kubectl
+          sudo install -m 0755 kind kubernetes/client/bin/kubectl /usr/local/bin/
+
+      - name: Create a pinned Kubernetes cluster
+        run: |
+          kind create cluster --name ci --wait 180s \
+            --image kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+
+      - name: Run Week 8 on kind
+        run: bash week8/verify.sh
+
+      - name: Diagnose the Week 9 practice incident
+        run: |
+          git clone --quiet https://github.com/inf345/inf345-week9-lab.git "$RUNNER_TEMP/week9"
+          cd "$RUNNER_TEMP/week9"
+          trap 'bash drill/start.sh reset' EXIT
+          bash drill/start.sh 1
+          set +e
+          timeout 45 bash drill/start.sh check 2>&1 | tee "$RUNNER_TEMP/drill-check.log"
+          check_status=${PIPESTATUS[0]}
+          set -e
+          if grep -Fq "the service does NOT answer" "$RUNNER_TEMP/drill-check.log"; then
+            echo "Incident confirmed: the user check reports that the service does NOT answer (check exit code: $check_status)"
+          else
+            echo "Expected the incident to report an unavailable service (check exit code: $check_status)"
+            exit 1
+          fi
+          kubectl -n drill get pods,services,endpointslices -o wide
+          kubectl -n drill describe deployment drill
+          kubectl -n drill describe pods
+          kubectl -n drill get events --sort-by=.lastTimestamp
+          kubectl -n drill logs deployment/drill --all-containers --tail=50 || true
+
+          rescue_image="$(cat drill/IMAGE)"
+          kubectl -n drill set image deployment/drill app="$rescue_image"
+          kubectl -n drill rollout status deployment/drill --timeout=120s
+
+          set +e
+          timeout 45 bash drill/start.sh check 2>&1 | tee "$RUNNER_TEMP/drill-fixed-check.log"
+          fixed_check_status=${PIPESTATUS[0]}
+          set -e
+          if grep -Eiq '(^|[^[:alpha:]])ok([^[:alpha:]]|$)' "$RUNNER_TEMP/drill-fixed-check.log"; then
+            echo "Incident fixed: the user check returned ok (check exit code: $fixed_check_status)"
+          else
+            echo "The fixed service did not return ok (check exit code: $fixed_check_status)"
+            exit 1
+          fi
