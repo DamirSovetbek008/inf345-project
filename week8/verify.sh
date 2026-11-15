@@ -60,4 +60,13 @@ k rollout history deployment/web
 
 k apply -f playground/mine.yaml
 k rollout status deployment/mine --timeout=180s
-k get --raw "/api/v1/namespaces/$namespace/services/mine:80/proxy/healthz" | tee /dev/stderr | grep -Fx OK
+health_path="/api/v1/namespaces/$namespace/services/mine:80/proxy/healthz"
+health_response=""
+for attempt in {1..10}; do
+  if health_response="$(k get --raw "$health_path" 2>/dev/null)" && [[ "$health_response" == "OK" ]]; then
+    printf '%s\\n' "$health_response" | tee /dev/stderr
+    break
+  fi
+  sleep 2
+done
+test "$health_response" = "OK"
