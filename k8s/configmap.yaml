@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inf345-project-config
+data:
+  PORT: "8080"
+  GREETING: "Hello from Kubernetes"
