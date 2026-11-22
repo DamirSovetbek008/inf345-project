@@ -57,3 +57,32 @@ A failed assertion exits with a nonzero code.
 `.github/workflows/main.yml` runs `bash scripts/test.sh` on every `push` and `pull_request`, using Python 3.12 on Ubuntu and Bash with pipefail. The workflow grants only `contents: read`.
 
 For M2, one health response assertion was temporarily changed to an incorrect expected value. GitHub Actions recorded a failed run, and the correct `OK` expectation was restored. The failed run remains in the history; the final tests pass.
+
+## GitOps deployment
+
+Argo CD reads `argocd/application.yaml` and automatically deploys the manifests in
+`k8s/` from the `main` branch to the `default` namespace. The Deployment uses the
+image tagged with a full commit SHA. CI builds and publishes the image; Argo CD
+applies the manifests and restores changes made directly in the cluster.
+
+Create `app-secret` in the cluster before syncing; it is intentionally absent from Git:
+
+```bash
+kubectl create secret generic app-secret --from-literal=API_KEY='<your own value>'
+kubectl apply -f argocd/application.yaml
+kubectl -n argocd get application inf345-project
+```
+
+## Rollback
+
+Argo CD deploys the `main` branch from the `k8s/` folder. To undo a bad image
+version, revert the commit that changed `k8s/deployment.yaml` and push it:
+
+```bash
+git log --oneline -- k8s/deployment.yaml
+git revert <image-bump-commit>
+git push origin main
+```
+
+Argo CD then restores the previous image. `kubectl rollout undo` would be
+overwritten by Argo CD's self-healing because Git would still specify the bad image.
