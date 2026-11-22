@@ -20,7 +20,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          image: ghcr.io/damirsovetbek008/inf345-project:2a48283e2206bb5feeb8f31819fa32601ac351c4
+          image: ghcr.io/damirsovetbek008/inf345-project:e0956497ad3cc8f4c9f63bff9e8250dd5461d1dc
           ports:
             - name: http
               containerPort: 8080
